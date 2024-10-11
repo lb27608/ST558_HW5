@@ -1,0 +1,98 @@
+---
+title: "ST 558 Homework 5: Exploratory Data Analysis"
+author: "Lee Bennett"
+format: html
+editor: visual
+---
+
+In this homework assignment, we'll use data from two Portuguese secondary schools from the UCI machine learninng repository to perform some exploratory data analysis. First, we'll read in the datasets for math and Portuguese scores and then merge the datasets in two different ways. Next, we'll explore the data by computing some summaries for both categorical and numeric variables.
+
+```{r}
+#| include: false
+
+library(tidyverse)
+```
+
+# Reading and Modifying the Data
+
+We'll first read in and merge the data using the base R code provided on the UCI website.
+
+```{r}
+d1=read.table("student-mat.csv",sep=";",header=TRUE)
+d2=read.table("student-por.csv",sep=";",header=TRUE)
+
+d3=merge(d1,d2,by=c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet"))
+print(nrow(d3)) # 382 students
+```
+
+Next, let's read in the data using the `tidyverse` function `read_delim` and merge the two sets of data using an inner join on the same variables specified above:
+
+```{r}
+data1 <- read_delim("student-mat.csv", delim=";", col_names=TRUE)
+data2 <- read_delim("student-por.csv", delim=";", col_names=TRUE)
+
+data_all <- inner_join(data1, data2, by=c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet"))
+```
+
+Add note about many-to-many join that is returned
+
+To alleviate this problem, we'll perform an inner join using all variables that the datasets have in common except for the variables `G1`, `G2`, `G3`, `paid`, and `absences`. This new combined dataset will be used for subsequent analyses.
+
+```{r}
+
+#Get the names of all variables that the two datasets have in common and remove the selected variables from the vector of names
+all_vars<-intersect(names(data1),names(data2))
+remove_vars <- c("G1", "G2", "G3", "paid", "absences")
+remain_vars <- all_vars[!all_vars %in% remove_vars]
+
+#Join the datasets on the remaining common variables
+ad_combined <- inner_join(data1, data2, by=remain_vars)
+```
+
+Finally, let's convert four variables of interest into `factor` variables that we'll summarize later. We'll use the variables for mother's and father's educational attainment, weekly study time, and receipt of extra educational support:
+
+```{r}
+edu_labels <- c("None","Primary education","5th to 9th grade","Secondary education","Higher education")
+
+ad_data1 <- data1 |> mutate(MeduF=factor(Medu, levels=c(0,1,2,3,4), labels=edu_labels),
+                         FeduF=factor(Fedu, levels=c(0,1,2,3,4), labels=edu_labels),
+                         studytimeF=factor(studytime, levels=c(1,2,3,4), labels=c("<2 hours","2 to 5 hours",
+                                                                               "5 to 10 hours", ">10 hours")),
+                         schoolsupF=factor(schoolsup,levels=c("yes","no"),labels=c("Extra support","No extra support")))
+                         
+ad_data2 <- data1 |> mutate(MeduF=factor(Medu, levels=c(0,1,2,3,4), labels=edu_labels),
+                         FeduF=factor(Fedu, levels=c(0,1,2,3,4), labels=edu_labels),
+                         studytimeF=factor(studytime, levels=c(1,2,3,4), labels=c("<2 hours","2 to 5 hours",
+                                                                               "5 to 10 hours", ">10 hours")),
+                         schoolsupF=factor(schoolsup,levels=c("yes","no"),labels=c("Extra support","No extra support")))
+
+ad_combined <- ad_combined |> mutate(MeduF=factor(Medu, levels=c(0,1,2,3,4), labels=edu_labels),
+                         FeduF=factor(Fedu, levels=c(0,1,2,3,4), labels=edu_labels),
+                         studytimeF=factor(studytime, levels=c(1,2,3,4), labels=c("<2 hours","2 to 5 hours",
+                                                                               "5 to 10 hours", ">10 hours")),
+                         schoolsupF=factor(schoolsup,levels=c("yes","no"),labels=c("Extra support","No extra support")))
+```
+
+# Exploratory Data Analysis
+
+All of the analyses below were conducted using the combined dataset `ad_combined`. First, we'll check the tibble to make sure that the variables appear to have the correct types and to see how much missing data there is for each variable:
+
+```{r}
+ad_combined
+
+colSums(is.na(ad_combined))
+```
+The results here indicate that all of the columns appears to have the correct type and there is no missing data, so we'll move on to create some contingency tables using the factor variables created above:
+
+```{r}
+
+table(ad_combined$schoolsupF)
+
+table(ad_combined$schoolsupF,ad_combined$studytimeF)
+
+table(ad_combined$schoolsupF,ad_combined$studytimeF,ad_combined$FeduF)
+```
+
+
+
+
